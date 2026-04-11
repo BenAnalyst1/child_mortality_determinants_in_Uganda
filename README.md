@@ -13,5 +13,6 @@
 - Logistic regression analysis of child mortality determinants
 
 ## Repository contents:
-- `data extraction phase`
-- `data cleaning phase`
+- `quarto document` - R script for data extraction phase
+- `dofile` - Stata script for data cleaning phase
+- `logfile` - Stata data cleaning log output
