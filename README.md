@@ -7,12 +7,12 @@
 - cleaned data
 
 ## Ongoing task
-- Exploratory data analysis in Stata
+- Exploratory data analysis in Stata and R
 
 ## Final task
 - Logistic regression analysis of child mortality determinants
 
 ## Repository contents:
-- `quarto document` - R script for data extraction phase
+- `.qmd` - R quarto script for data extraction phase
 - `dofile` - Stata script for data cleaning phase
 - `logfile` - Stata data cleaning log output
