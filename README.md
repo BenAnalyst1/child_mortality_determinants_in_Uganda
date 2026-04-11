@@ -13,5 +13,5 @@
 - Logistic regression analysis of child mortality determinants
 
 ## Repository contents:
--`data extraction phase`
+- `data extraction phase`
 - `data cleaning phase`
