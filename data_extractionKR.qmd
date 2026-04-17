@@ -1,0 +1,102 @@
+---
+title: "data extraction"
+author: "Boro, Binya Benson Abe"
+format: html
+editor: visual
+---
+
+1.  Install packages and load the data. The data file "UGKR7BFL_10PERCENT.dta" was downloaded from the Uganda Bureau of Statistics. It consists of 10 percent sample of kid's records in the 2022 Uganda Demography and Health Survey
+
+```{r}
+#| label: working directory, packages, and data
+
+## working directory
+setwd("/Users/benson/Desktop/econ_analysis/health_analysis")
+
+## install and load packages
+if(!require(pacman)) install.packages("pacman") # pacman manages the packages
+
+p_load( # install and load packages
+tidyverse,
+dplyr,
+haven,
+here,
+labelled,
+arrow,
+janitor
+)
+
+## load the data file: UGKR7BFL_10PERCENT.dta
+dhs_KRdt <- read_dta(here("data/UGKR7BFL_10PERCENT.dta"))
+view(dhs_KRdt)
+
+## generate a data dictionary to ease search for and understand data attributes
+dhs_df <- generate_dictionary(dhs_KRdt)
+view(dhs_df)
+```
+
+2.  Select relevant variables
+
+I selected the variables of interest following Mosley and Chen's (1984) framework for the analysis child health determinants. They include:
+
+Outcome: child mortality;
+
+Child-level factors: gender, age, size;
+
+Maternal factors: mother's age, education;
+
+Household factors: wealth, water, sanitation
+
+```{r}
+#| label: relevant variables
+#| echo: false
+
+rel_vars <- dhs_KRdt %>% select(
+  # key identifiers
+  caseid, # unique mother identifier
+  bidx, # child identifier
+  v001, # cluster - sampling unit (EA)
+  v002, # household within cluster
+ 
+  # outcome variable: child mortality
+  b5, # child is alive (1 = yes, 0 = no)
+  
+  # child-level factors
+  b4, # sex
+  b8, # age in months
+  
+  # independent variable
+  v106, # mother's level of education
+  
+  # controls
+  v190, # wealth index
+  v025, # place of residence (1 = Urban, 2= Rural)
+  v024, # region
+  v012, # mother's age
+  v201, # total children ever born
+  
+  # others
+  v113, # source of drinking water
+  m4,  # duration of breastfeeding
+  bord, # child birth order
+  b11, # preceeding birth interval
+  
+  # survey design variables
+  v005, # sample weight
+  v021, # cluster - Primary sampling unit 
+  v022 # sample strata
+)
+
+# Uniqueness check = TRUE
+nrow(dhs_KRdt) == length(unique(paste(dhs_KRdt$caseid, dhs_KRdt$bidx)))
+# Note:Unit = child, unique identifier = caseid + bidx
+
+# check whether duplicates exist
+rel_vars %>%
+  count(caseid,bidx, v001, v002) %>%
+  filter(n > 1) %>%
+  arrange(desc(n)) # returns "0" rows which implies no duplicates
+
+# save extracted data as a stata file
+write_dta(dhs_KRdt, here("data/dhs_extrac.dta"))
+```
