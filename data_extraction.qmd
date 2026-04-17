@@ -1,5 +1,5 @@
 ---
-title: "Extracting data from the 2022 Uganda Demographic and Health Survey"
+title: "data extraction, 2022 DHS (IR - Individual records
 author: "Boro, Binya Benson Abe"
 format: html
 ---
