@@ -27,17 +27,17 @@ janitor
 )
 
 ## load the data file: UGKR7BFL_10PERCENT.dta
-dhs_KRdt <- read_dta(here("data/UGKR7BFL_10PERCENT.dta"))
-view(dhs_KRdt)
+dhsKR_raw <- read_dta(here("data/UGKR7BFL_10PERCENT.dta"))
+view(dhsKR_raw) # 1436 observations and 6356 variables
 
-## generate a data dictionary to ease search for and understand data attributes
-dhs_df <- generate_dictionary(dhs_KRdt)
-view(dhs_df)
+## generate a data dictionary to ease search and extraction of relevant variables
+dhsKR_dt <- generate_dictionary(dhsKR_raw)
+view(dhsKR_dt)
 ```
 
 2.  Select relevant variables
 
-I selected the variables of interest following Mosley and Chen's (1984) framework for the analysis child health determinants. They include:
+I selected the variables of interest following Mosley and Chen's (1984) framework for the analysis of child health determinants. They include:
 
 Outcome: child mortality;
 
@@ -51,7 +51,7 @@ Household factors: wealth, water, sanitation
 #| label: relevant variables
 #| echo: false
 
-rel_vars <- dhs_KRdt %>% select(
+rel_vars <- dhsKR_raw %>% select(
   # key identifiers
   caseid, # unique mother identifier
   bidx, # child identifier
@@ -88,7 +88,7 @@ rel_vars <- dhs_KRdt %>% select(
 )
 
 # Uniqueness check = TRUE
-nrow(dhs_KRdt) == length(unique(paste(dhs_KRdt$caseid, dhs_KRdt$bidx)))
+nrow(dhsKR_raw) == length(unique(paste(dhsKR_raw$caseid, dhsKR_raw$bidx)))
 # Note:Unit = child, unique identifier = caseid + bidx
 
 # check whether duplicates exist
@@ -98,5 +98,5 @@ rel_vars %>%
   arrange(desc(n)) # returns "0" rows which implies no duplicates
 
 # save extracted data as a stata file
-write_dta(dhs_KRdt, here("data/dhs_extrac.dta"))
+write_dta(dhsKR_raw, here("raw_data/dhsKR_extrac.dta"))
 ```
