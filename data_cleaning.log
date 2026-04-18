@@ -1,0 +1,502 @@
+---------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/benson/Desktop/econ_analysis/health_analysis/stata/data_cleaning.lo
+> g
+  log type:  text
+ opened on:  18 Apr 2026, 07:17:51
+
+. 
+. * Load the dataset
+. use "raw_data/dhsKR_extrac.dta", clear
+
+. 
+. * check data descrption
+. describe 
+
+Contains data from raw_data/dhsKR_extrac.dta
+ Observations:         1,436                  
+    Variables:            19                  18 Apr 2026 06:54
+---------------------------------------------------------------------------------------
+Variable      Storage   Display    Value
+    name         type    format    label      Variable label
+---------------------------------------------------------------------------------------
+caseid          str10   %10s                  Case Identification
+bidx            double  %9.0g                 Birth column number
+v001            double  %8.0g                 Cluster number
+v002            double  %8.0g                 Household number
+b5              double  %8.0g                 Child is alive
+b4              double  %8.0g                 Sex of child
+b8              double  %8.0g                 Current age of child
+v106            double  %15.0g     v106       Highest educational level
+v190            double  %10.0g     v190       Wealth index combined
+v025            double  %8.0g      v025       Type of place of residence
+v024            double  %13.0g     v024       Region
+v012            double  %18.0g     v012       Respondent's current age
+v201            double  %8.0g                 Total children ever born
+v113            double  %73.0f     v113       Source of drinking water
+bord            double  %8.0g                 rank of ( -bidx) by qcluster qnumber
+                                                qline
+b11             double  %9.0g                 Preceding birth interval (months)
+v005            double  %9.0g                 Women's individual sample weight (6
+                                                decimals)
+v021            double  %9.0g                 Primary sampling unit
+v022            double  %30.0g     v022       Sample strata for sampling errors
+---------------------------------------------------------------------------------------
+Sorted by: 
+
+. * There are 1,436 observations and 20 variables. A nned to rename variables and label
+> s
+. 
+. *************** Rename variable ********************
+. rename v001 cluster_no
+
+. rename v002 household_No
+
+. rename b5 child_survived 
+
+. rename b4 gender
+
+. rename b8 child_age
+
+. rename v106 meduc
+
+. rename v190 wl_index
+
+. rename v025 resid_type
+
+. rename v024 region
+
+. rename v012 mage
+
+. rename v201 total_children
+
+. rename v113 water_source
+
+. rename bord birth_order
+
+. rename b11 birth_interval
+
+. rename v005 sample_weight
+
+. rename v021 psu_cluster  
+
+. rename v022 sample_strata
+
+. 
+. ************** label variable ***********************
+. label variable child_survived "Child Survived Under 5 Mortality (1 = Yes, 0 = No)"
+
+. label variable gender "Gender of the Child (1 = Male, 0 = Female)"
+
+. label variable child_age "Age of the Child (In Months)"
+
+. label variable meduc "Mother's Highest Level of Education"
+
+. label variable wl_index "Household Wealth Index"
+
+. label variable resid_type "Place of Residence (1 = Urban, 2 = Rural)"
+
+. label variable region "Region"
+
+. label variable mage "Age of the Mother"
+
+. label variable total_children "Total No. of Children Born"
+
+. label variable water_source "Source of Drinking Water"
+
+. label variable birth_order "Birth Order"
+
+. label variable birth_interval "Preceding Birth Interval(in Months)"
+
+. label variable sample_weight "Sample Weight"
+
+. label variable psu_cluster "Primary Sampling Unit -  Cluster"
+
+. label variable sample_strata "Sample Strata"
+
+. 
+. 
+. *********** checking missing observations ***********
+. 
+. foreach var of varlist child_survived gender child_age meduc wl_index ///
+> resid_type total_children water_source ///
+> birth_order birth_interval region ///
+>  mage {
+  2.         quietly count if missing(`var')
+  3.         local pct = round(`r(N)' / _N * 100, 0.1)
+  4.         di "`var': `r(N)' missing (`pct'%)"
+  5. }
+child_survived: 0 missing (0%)
+gender: 0 missing (0%)
+child_age: 69 missing (4.800000000000001%)
+meduc: 0 missing (0%)
+wl_index: 0 missing (0%)
+resid_type: 0 missing (0%)
+total_children: 0 missing (0%)
+water_source: 2 missing (.1%)
+birth_order: 0 missing (0%)
+birth_interval: 290 missing (20.2%)
+region: 0 missing (0%)
+mage: 0 missing (0%)
+
+. misstable summarize 
+                                                               Obs<.
+                                                +------------------------------
+               |                                | Unique
+      Variable |     Obs=.     Obs>.     Obs<.  | values        Min         Max
+  -------------+--------------------------------+------------------------------
+     child_age |        69               1,367  |      5          0           4
+  water_source |         2               1,434  |     16         11          96
+  birth_inte~l |       290               1,146  |    113          7         171
+  -----------------------------------------------------------------------------
+
+. * Some variables have missing observations.
+. 
+. 
+. ******************* cleaning and recoding variables************
+. 
+. *** child_survived
+. tabulate child_survived // 1 = Yes, 0 = N0
+
+      Child |
+   Survived |
+    Under 5 |
+  Mortality |
+(1 = Yes, 0 |
+      = No) |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |         69        4.81        4.81
+          1 |      1,367       95.19      100.00
+------------+-----------------------------------
+      Total |      1,436      100.00
+
+. 
+. * recode
+. label define sur_lbl 1 "Yes" 0 "No" 
+
+. label values child_survived sur_lbl
+
+. 
+. *** gender
+. tabulate gender // 1= Boy and 2 = Girl
+
+  Gender of |
+  the Child |
+ (1 = Male, |
+0 = Female) |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          1 |        719       50.07       50.07
+          2 |        717       49.93      100.00
+------------+-----------------------------------
+      Total |      1,436      100.00
+
+. 
+. * record to male and female
+. replace gender = 0 if gender == 2
+(717 real changes made)
+
+. 
+. label define gend_lbl 0 "Female" 1 "Male"
+
+. label values gender gend_lbl
+
+. 
+. 
+. *** meduc - mother's educational level
+. tabulate meduc // 0 = no education, 1 = primary, 2 = Secondary, 3 = Higher
+
+       Mother's |
+  Highest Level |
+   of Education |      Freq.     Percent        Cum.
+----------------+-----------------------------------
+0. No education |        135        9.40        9.40
+     1. Primary |        869       60.52       69.92
+   2. Secondary |        374       26.04       95.96
+      3. Higher |         58        4.04      100.00
+----------------+-----------------------------------
+          Total |      1,436      100.00
+
+. 
+. * recode values
+. replace meduc = 0 if meduc == 0
+(0 real changes made)
+
+. replace meduc = 1 if meduc == 1
+(0 real changes made)
+
+. replace meduc = 2 if meduc == 2
+(0 real changes made)
+
+. replace meduc = 3 if meduc == 3
+(0 real changes made)
+
+. 
+. label define meduc_lbl ///
+> 0 "No education" ///
+> 1 "Primary" ///
+> 2 "Secondary" ///
+> 3 "Higher"
+
+. label values meduc meduc_lbl
+
+. 
+. *** wl_index - wealth index
+. tabulate wl_index
+
+  Household |
+     Wealth |
+      Index |      Freq.     Percent        Cum.
+------------+-----------------------------------
+  1. Lowest |        382       26.60       26.60
+  2. Second |        287       19.99       46.59
+  3. Middle |        268       18.66       65.25
+  4. Fourth |        247       17.20       82.45
+ 5. Highest |        252       17.55      100.00
+------------+-----------------------------------
+      Total |      1,436      100.00
+
+. 
+. * recode values
+. replace wl_index = 1 if wl_index == 1
+(0 real changes made)
+
+. replace wl_index = 2 if wl_index == 2
+(0 real changes made)
+
+. replace wl_index = 3 if wl_index == 3
+(0 real changes made)
+
+. replace wl_index = 4 if wl_index == 4
+(0 real changes made)
+
+. replace wl_index = 5 if wl_index == 5
+(0 real changes made)
+
+. 
+. * add labels
+. label define wl_ind 1 "Poorest" 2 "Poorer" 3 "Middle" 4 "Richer" 5 "Richest"
+
+. label values wl_index wl_ind
+
+. 
+. *** resid_type - type of place of residence
+. codebook resid_type
+
+---------------------------------------------------------------------------------------
+resid_type                                    Place of Residence (1 = Urban, 2 = Rural)
+---------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+                 Label: v025
+
+                 Range: [1,2]                         Units: 1
+         Unique values: 2                         Missing .: 0/1,436
+
+            Tabulation: Freq.   Numeric  Label
+                          426         1  1. Urban
+                        1,010         2  2. Rural
+
+. 
+. * recode values
+. replace resid_type = 0 if resid_type == 2
+(1,010 real changes made)
+
+. 
+. * add labels
+. label define resid_lbl 1 "Urban" 0 "Rural"
+
+. label values resid_type resid_lbl
+
+. 
+. *** region
+. tabulate region
+
+       Region |      Freq.     Percent        Cum.
+--------------+-----------------------------------
+   0. kampala |         77        5.36        5.36
+   1. buganda |        205       14.28       19.64
+    3. busoga |        144       10.03       29.67
+    4. bukedi |         87        6.06       35.72
+    5. bugisu |         84        5.85       41.57
+      6. teso |         99        6.89       48.47
+  7. karamoja |         84        5.85       54.32
+     8. lango |         98        6.82       61.14
+    9. acholi |         90        6.27       67.41
+10. west nile |        112        7.80       75.21
+  11. bunyoro |        111        7.73       82.94
+    12. tooro |        104        7.24       90.18
+   13. ankole |         92        6.41       96.59
+   14. kigezi |         49        3.41      100.00
+--------------+-----------------------------------
+        Total |      1,436      100.00
+
+. 
+. * recode region
+. replace region = 1 if region == 0
+(77 real changes made)
+
+. replace region = 2 if region == 1
+(282 real changes made)
+
+. replace region = 3 if region == 3
+(0 real changes made)
+
+. replace region = 4 if region == 4
+(0 real changes made)
+
+. replace region = 5 if region == 5
+(0 real changes made)
+
+. replace region = 6 if region == 6
+(0 real changes made)
+
+. replace region = 7 if region == 7
+(0 real changes made)
+
+. replace region = 8 if region == 8
+(0 real changes made)
+
+. replace region = 9 if region == 9
+(0 real changes made)
+
+. replace region = 10 if region == 10
+(0 real changes made)
+
+. replace region = 11 if region == 11
+(0 real changes made)
+
+. replace region = 12 if region == 12
+(0 real changes made)
+
+. replace region = 13 if region == 13
+(0 real changes made)
+
+. replace region = 14 if region == 14
+(0 real changes made)
+
+. 
+. * add labels
+. label define reg_lb ///
+>  1 "Kampala" ///
+>  2 "Buganda" ///
+>  3 "Busoga" ///
+>  4 "Bukedi" ///
+>  5 "Bugisu" ///
+>  6 "Teso" ///
+>  7 "Karamoja" ///
+>  8 "Lango" ///
+>  9 "Acholi" ///
+>  10 "West nile" ///
+>  11 "Bunyoro" ///
+>  12 "Tooro" ///
+>  13 "Ankole" ///
+>  14 "Kigezi"
+
+. 
+.  label values region reg_lb
+
+.  
+.  *** water sources
+. codebook water_source
+
+---------------------------------------------------------------------------------------
+water_source                                                   Source of Drinking Water
+---------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+                 Label: v113
+
+                 Range: [11,96]                       Units: 1
+         Unique values: 16                        Missing .: 2/1,436
+
+              Examples: 14    14. Public tap/standpipe
+                        21    21. Tube well or borehole
+                        21    21. Tube well or borehole
+                        32    32. Unprotected well
+
+. 
+. replace water_source = . if water_source == 96 // 96 is possibly a sentinel code
+(1 real change made, 1 to missing)
+
+. 
+. * recod
+. replace water_source = 0 if water_source == 11
+(11 real changes made)
+
+. replace water_source = 1 if water_source == 12
+(71 real changes made)
+
+. replace water_source = 2 if water_source == 13
+(122 real changes made)
+
+. replace water_source = 3 if water_source == 14
+(100 real changes made)
+
+. replace water_source = 4 if water_source == 21
+(707 real changes made)
+
+. replace water_source = 5 if water_source == 31
+(61 real changes made)
+
+. replace water_source = 6 if water_source == 32
+(89 real changes made)
+
+. replace water_source = 7 if water_source == 41
+(109 real changes made)
+
+. replace water_source = 8 if water_source == 42
+(34 real changes made)
+
+. replace water_source = 9 if water_source == 51
+(14 real changes made)
+
+. replace water_source = 10 if water_source == 61
+(2 real changes made)
+
+. replace water_source = 11 if water_source == 71
+(5 real changes made)
+
+. replace water_source = 12 if water_source == 81
+(98 real changes made)
+
+. replace water_source = 13 if water_source == 91
+(7 real changes made)
+
+. replace water_source = 14 if water_source == 92
+(3 real changes made)
+
+. 
+. * add labels
+. label define wat_lbl ///
+> 0 "Piped into dwelling" ///
+> 1 "Piped to plot" ///
+> 2 "Piped to neigbor" ///
+> 3 "Public tap" ///
+> 4 "Borehole" ///
+> 5 "Protected well" ///
+> 6 "Unprotected well" ///
+> 7 "Protected spring" ///
+> 8 "Unprotected spring" ///
+> 9 "Rainwater" ///
+> 10 "Tanker truck" ///
+> 11 "Bicycle with jerrycans" ///
+> 12 "Surface water (river, dam, lake, pond)" ///
+> 13 "Bottled water" ///
+> 14 "Sachet water"
+
+. label values water_source wat_lbl
+
+. 
+. *** save dataset
+. save "cleaned_data/dhsKR_cleaned.dta", replace
+file cleaned_data/dhsKR_cleaned.dta saved
+
+. 
+. * close log
+. log close
+      name:  <unnamed>
+       log:  /Users/benson/Desktop/econ_analysis/health_analysis/stata/data_cleaning.lo
+> g
+  log type:  text
+ closed on:  18 Apr 2026, 07:17:52
+---------------------------------------------------------------------------------------
