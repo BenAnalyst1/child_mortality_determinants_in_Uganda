@@ -77,7 +77,6 @@ rel_vars <- dhsKR_raw %>% select(
   
   # others
   v113, # source of drinking water
-  m4,  # duration of breastfeeding
   bord, # child birth order
   b11, # preceeding birth interval
   
