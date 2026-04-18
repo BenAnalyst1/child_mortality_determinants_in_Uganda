@@ -10,7 +10,7 @@
 - Exploratory data analysis in Stata and R
 
 ## Final task
-- Logistic regression analysis of child mortality determinants
+- Logistic regression analysis of child mortality determinants, but a particular empirical quest on how maternal level of education affects child survival
 
 ## Repository contents:
 - `.qmd` - R quarto script for data extraction phase
