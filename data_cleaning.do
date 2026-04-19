@@ -19,7 +19,7 @@ use "raw_data/dhsKR_extrac.dta", clear
 
 * check data descrption
 describe 
-* There are 1,436 observations and 20 variables. A nned to rename variables and labels
+* There are 1,436 observations and 19 variables. A need to rename variables and labels
 
 *************** Rename variable ********************
 rename v001 cluster_no
@@ -58,8 +58,8 @@ label variable psu_cluster "Primary Sampling Unit -  Cluster"
 label variable sample_strata "Sample Strata"
 
 
-*********** checking missing observations ***********
-
+*********** checking and handling missing observations ***********
+* checking missing observations
 foreach var of varlist child_survived gender child_age meduc wl_index ///
 resid_type total_children water_source ///
 birth_order birth_interval region ///
@@ -67,13 +67,26 @@ birth_order birth_interval region ///
 	quietly count if missing(`var')
 	local pct = round(`r(N)' / _N * 100, 0.1)
 	di "`var': `r(N)' missing (`pct'%)"
-}
-misstable summarize 
-* Some variables have missing observations.
+} 
+* Some variables have missing observations. They include: child_age(4.8%), water_source(0.1%), and birth_interval(20.2%)
 
+* handling missing observations
+
+generate age_missing = missing(child_age)
+replace child_age = 0 if missing(child_age)
+label variable age_missing "Child Age Missing"
+* If the 4.8% missing observations in child age are dropped, all records of dead children in the child_survived variable also drops.
+* The age_missing variable thus captures children whose current age is missing. 
+
+drop if missing(water_source) // the small percentage of missing observations (0.1%) is neglible
+
+generate birth_missing = missing(birth_interval)
+replace variable birth_interval = 0 if missing(birth_interval)
+label variable birth_interval "Birth Interval Missing"
+* The 20.2% missing birth interval entries could be due to non-responses from women with no preceding birth. In this case, they might indicate first born children
+* Thus, birth_missing = 1 could indicate first born children or merely missing birth intervals
 
 ******************* cleaning and recoding variables************
-
 *** child_survived
 tabulate child_survived // 1 = Yes, 0 = N0
 
