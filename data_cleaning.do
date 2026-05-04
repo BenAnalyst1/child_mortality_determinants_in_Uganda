@@ -41,14 +41,14 @@ rename v021 psu_cluster
 rename v022 sample_strata
 
 ************** label variable ***********************
-label variable child_survived "Child Survived Under 5 Mortality (1 = Yes, 0 = No)"
+label variable child_survived "Child Survived Under 5 Mortality (1 = Alive, 0 = Dead)"
 label variable gender "Gender of the Child (1 = Male, 0 = Female)"
 label variable child_age "Age of the Child (In Months)"
 label variable meduc "Mother's Highest Level of Education"
 label variable wl_index "Household Wealth Index"
 label variable resid_type "Place of Residence (1 = Urban, 2 = Rural)"
 label variable region "Region"
-label variable mage "Age of the Mother"
+label variable mage "Age of the Mother (Years)"
 label variable total_children "Total No. of Children Born"
 label variable water_source "Source of Drinking Water"
 label variable birth_order "Birth Order"
@@ -88,10 +88,10 @@ label variable birth_interval "Birth Interval Missing"
 
 ******************* cleaning and recoding variables************
 *** child_survived
-tabulate child_survived // 1 = Yes, 0 = N0
+tabulate child_survived // 1 = Alive, 0 = Dead
 
 * recode
-label define sur_lbl 1 "Yes" 0 "No" 
+label define sur_lbl 1 "Alive" 0 "Dead" 
 label values child_survived sur_lbl
 
 *** gender
