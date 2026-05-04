@@ -1,0 +1,1105 @@
+---
+title: "descriptive data analysis"
+data: "Uganda 2022 Demographic and Health Survey"
+author: "Boro, Binya Benson Abe"
+format: docx
+---
+
+```{r}
+#| label: working directory, packages, and load data
+#| echo: false
+
+# working directory
+setwd("/Users/benson/Desktop/econ_analysis/health_analysis")
+
+# packages
+if(!require(pacman)) install.packages("pacman")
+
+p_load(
+tidyverse,
+haven,
+dplyr,
+labelled,
+survey,
+srvyr,
+gtsummary,
+ggpubr,
+officer,
+ggplot2,
+flextable,
+glue,
+here
+)
+
+# load data
+dhsKR_data <- read_dta(here("cleaned_data/dhsKR_cleaned.dta"))
+```
+
+1.  Survey design declaration
+
+```{r}
+#| label: survey design declaration
+#| echo: false
+
+# Prepare variables before declaration
+
+dhsKR_data <- dhsKR_data %>% # First, convert continuous variables to numeric
+  mutate(
+    mage = as.numeric(mage),
+    birth_interval = as.numeric(birth_interval),
+    total_children = as.numeric(total_children),
+    birth_order = as.numeric(birth_order),
+    
+    # Then, replace sentinel codes for all continuous variables
+    mage = if_else(mage >= 98, NA_real_, mage),
+    birth_interval = if_else(birth_interval >= 98,
+                             NA_real_, birth_interval),
+    total_children = if_else(total_children >= 98,
+                             NA_real_, total_children),
+    birth_order = if_else(birth_order >= 98, NA_real_, birth_order)
+  )
+
+# The child's birth order has too many entries. I collapse the, into just four categories as shown in the code below.
+
+dhsKR_data <- dhsKR_data %>% mutate(birth_order_cat = case_when(
+  birth_order == 1 ~ "1st",
+  birth_order %in% c(2, 3) ~ "2nd-3rd",
+  birth_order >= 4 ~ "4th+",
+  TRUE ~ NA_character_) %>% 
+    factor(levels = c("1st", "2nd-3rd", "4th+"))
+)
+table(dhsKR_data$birth_order_cat, useNA = "always") # Verify collapse - now, 286 children were first born, 503 were second and third born, and 645 were born fourth and above in the family. 
+
+# Convert haven_labelled variables and verify
+
+dhsKR_data <- dhsKR_data %>% # Returns true variable categories instead of numeric values
+  mutate(across(where(is.labelled),
+                as_factor))
+
+any(sapply(dhsKR_data, is.labelled)) # returns FALSE, verifying there are no remaining haven_labelled columns. Continuous variables remain numeric
+
+
+# Declare survey design variables
+
+dhsKR_data <- dhsKR_data %>% # First, convert the survey variables to integers
+  mutate(
+    psu_int = as.integer(psu_cluster), # converts the primary sampling unit (psu)
+    strata_int = as.integer(sample_strata), # converts stratification variable
+    weight = sample_weight/1000000 # restores true sample weights
+)
+
+dhsKR_df <- as.data.frame(dhsKR_data) # This code converts dhsKR_data into a base R data frame as required by the svydesign() package. The immediate code below then declares the survey design variables
+
+DHSKR_data <- svydesign(
+  id = ~psu_int,
+  strata = ~strata_int,
+  weights = ~weight,
+  data = dhsKR_df,
+  nest = TRUE
+)
+
+# The main data for the survey analysis is now DHSKR_data. The code below creates a tibble out of it, to used when applying tidyverse()
+
+DHSKR_tbl <- as_survey_design(DHSKR_data)
+
+```
+
+2.  Data validation checks
+
+The data has no lonely Primary Sampling Units (clusters), with the validation check returning a value of zero. The weighted child mortality rate is 49.0 per 1000 live births in Uganda. This means approximately 49 children out of 1000 live births die before reaching the age of 5 in Uganda. This weighted rate accounts for the DHS sampling design, and so, it represents the true population rate. The confidence interval implies that the true under 5 mortality rate in Uganda lies anywhere between 36.0 and 62.0 per 1000 live births, with 49.0 being the likely estimate.
+
+```{r}
+#| label: Data validation checks
+#| echo: false
+
+# Check for lonely Primary Sampling Units (PSU)
+
+dhsKR_data %>% group_by(strata_int) %>% 
+  summarise(n_clusters = n_distinct(psu_int)) %>%
+  filter(n_clusters == 1)
+# returns 0 rows, signifying no lonely PSU
+
+# Check unweighted and weighted sample sizes (N)
+
+cat("Unweighted N: ", nrow(dhsKR_data), "\n")
+cat("Weighted N: ", sum(dhsKR_data$weight), "\n")
+# Unweighted N = 1434. This indicates actual number of mothers surveyed. Weighted N = 1464 indicates the actual population size represented by the sample
+
+
+# Check for weighted child mortality rate
+
+weighted_mort <- svymean(~child_survived, DHSKR_data, na.rm = TRUE)
+print(weighted_mort) # returns child_survivedDead = 0.049, the child mortality rate
+
+# Extract child mortality rate and confidence interval(CI)
+mort_rate <- coef(weighted_mort)["child_survivedDead"]
+mort_ci <- confint(weighted_mort)
+
+cat(sprintf(
+  "Weighted child mortality rate: %.1f per 1,000 live births in Uganda (95%% CI: %.1f - %.1f)\n",
+  mort_rate * 1000,
+  mort_ci["child_survivedDead", 1] * 1000,
+  mort_ci["child_survivedDead", 2] * 1000
+))
+# Weighted child mortality rate is 49.0 per 1,000 live births in Uganda, with a 95% confidence interval of 36.0 - 62.0.
+
+# This far, I have created the following data:
+"dhsK_data" # a plain tibble for data manipulation 
+"dhsKR_df" # a base R data frame version of dhsK_data; used for declaring survey variables
+"DHSKR_data" # resulted from survey design declaration, to be used for weighted analysis
+"DHSKR_tbl" # a tidyverse-compatible version of DHSKR_data, suitable for ggplot visualizations
+```
+
+3.  Descriptive data analysis
+This section produces summary statistics of key variables, bivariate analysis of the relationship between child mortality and key variables, and graphical representation of these variables.Since some variables consists of several entries, for example, region and water source, they are summarized separately to avoid huge tables and figures.
+
+3.1. Child and Maternal Characteristics
+
+```{r}
+#| label: Child and Maternal Characteristics
+#| echo: false
+
+# Store unweighted sample size
+n_total <- nrow(dhsKR_data)
+
+# Generate summary statistics
+table_1 <- tbl_svysummary(
+  data = DHSKR_data, include = c(
+    gender,
+    birth_order_cat,
+    birth_interval,
+    mage,
+    meduc,
+    total_children),
+  
+  type = list(
+    mage ~ "continuous",
+    total_children ~ "continuous",
+    birth_interval ~ "continuous",
+    birth_order_cat ~ "categorical",
+    gender ~ "categorical",
+    meduc ~ "categorical"),
+  
+  statistic = list(
+    all_categorical() ~ "{n_unweighted} ({p}%)",
+    all_continuous() ~ "{mean} ({sd})"),
+  
+  digits = list(
+    all_categorical() ~ c(0, 1),
+    all_continuous() ~ c(1, 1)),
+  
+  missing = "ifany",
+  missing_text = "Missing") %>% 
+  
+  bold_labels() %>% 
+  modify_header(
+    label ~ "**Characteristics**",
+    stat_0 ~ glue("**n (%), N = {n_total}**")) %>% 
+  
+  modify_caption(
+    "Table 1: Child and Maternal Characteristics.") %>%
+  
+  modify_footnote(
+    all_stat_cols() ~ "Unweighted N (weighted %); DHS sampling weights applied. Mean (SD) for all continuous variables.")
+
+table_1
+
+# Export table_1 to word
+table_1 %>% as_flex_table () %>% 
+  save_as_docx(path = here("result/Table1_child_maternal.docx"))
+```
+
+3.2. Household socioeconomic characteristics and location
+
+```{r}
+#| label: Socioeconomic characteristics and location
+#| echo: false
+
+# summary of socioeconomic characteristics
+
+table_2 <- tbl_svysummary(
+  data = DHSKR_data, include = c(
+    wl_index,
+    water_source
+    ),
+  
+  type = list(
+    wl_index ~ "categorical",
+    water_source ~ "categorical"),
+  
+  statistic = list(all_categorical() ~ "{n_unweighted} ({p}%)"),
+  digits = list(all_categorical() ~ c(0, 1)),
+  
+  missing = "ifany",
+  missing_text = "Missing"
+  ) %>%
+  
+  bold_labels() %>% 
+  italicize_levels() %>% 
+  modify_header(
+    label ~ "**Characteristics**",
+    stat_0 ~ glue("**n (%), N = {n_total}**")) %>% 
+  
+  modify_caption(
+    "Table 2: Household socioeconomic characteristics") %>%
+  
+  modify_footnote(
+    all_stat_cols() ~ "Unweighted n (Weighted %); DHS sampling weights applied.")
+
+table_2
+
+# Export to word 
+table_2 %>% as_flex_table() %>% 
+  save_as_docx(path = here("result/Table2_household_SES.docx"))
+
+
+# Summary of location
+
+DHSKR_data$variables <- DHSKR_data$variables %>%
+  mutate(region = droplevels(region)) # drops Kampala because it is part of the Buganda region
+
+# Generate summary table
+table_3 <- tbl_svysummary(
+  data = DHSKR_data, include = c(
+    resid_type,
+    region
+    ),
+  
+  type = list(
+    resid_type ~ "categorical",
+    region ~ "categorical"
+    ),
+  
+  statistic = list(all_categorical() ~ "{n_unweighted} ({p}%)"),
+  digits = list(all_categorical() ~ c(0, 1)),
+  
+  missing = "ifany",
+  missing_text = "Missing"
+  ) %>% 
+  
+  bold_labels() %>% 
+  italicize_levels() %>% 
+  modify_header(
+    label ~ "**Characteristics**",
+    stat_0 ~ glue("**n (%), N = {n_total}**")) %>% 
+  
+  modify_caption(
+    "**Table 3: Household location**") %>% 
+  
+  modify_footnote(
+    all_stat_cols() ~ "Unweighted n (Weighted %); DHS sampling weights applied.")
+
+table_3
+
+# export to word 
+table_3 %>% as_flex_table() %>% 
+  save_as_docx(path = here("result/Table3_location.docx"))
+
+```
+
+3.3 Summary statistics of weighted child mortality rate by subgroups
+
+```{r}
+#| label: Child mortality by subgroups
+#| echo: false
+
+# Generate and store overall child mortality rate
+
+mort_overall <- DHSKR_tbl %>% 
+  summarise(
+    rate = survey_mean(child_survived == "Dead",
+                       na.rm = TRUE,
+                       vartype = "ci") * 1000) %>% 
+  mutate(subgroup = "Overrall", level = glue("N ={n_total}"))
+
+# Generate child mortality rate by subgroups
+
+# By residence
+
+mort_residence <- DHSKR_tbl %>% group_by(resid_type) %>% 
+  summarise(
+    rate = survey_mean(child_survived == "Dead",
+                       na.rm = TRUE,
+                       vartype = "ci")*1000) %>% 
+  mutate(subgroup = "Place of residence",
+         level = as.character(resid_type)) %>% 
+  select(-resid_type)
+
+# By wealth index
+
+mort_wealth <- DHSKR_tbl %>% group_by(wl_index) %>%
+  summarise(
+    rate = survey_mean(child_survived == "Dead",
+                       na.rm = TRUE,
+                       vartype = "ci")*1000) %>%
+  mutate(subgroup = "Wealth index",
+         level = as.character(wl_index)) %>%
+  select(-wl_index)
+
+# By mother's level of education
+
+mort_education <- DHSKR_tbl %>% group_by(meduc) %>%
+  summarise(
+    rate = survey_mean(child_survived == "Dead",
+                       na.rm   = TRUE,
+                       vartype = "ci")*1000) %>%
+  mutate(subgroup = "Maternal education",
+         level = as.character(meduc)) %>%
+  select(-meduc)
+
+# By gender of the child
+
+mort_gender <- DHSKR_tbl %>% group_by(gender) %>%
+  summarise(
+    rate = survey_mean(child_survived == "Dead",
+                       na.rm   = TRUE,
+                       vartype = "ci")*1000) %>%
+  mutate(subgroup = "Child sex",
+         level = as.character(gender)) %>%
+  select(-gender)
+
+# By child's birth order
+
+mort_birthOrder <- DHSKR_tbl %>% group_by(birth_order_cat) %>% 
+  summarise(
+    rate = survey_mean(child_survived = "Dead",
+                       na.rm = FALSE,
+                       vartype = "ci")*1000) %>% 
+  mutate(subgroup = "Birth order",
+         level = as.character(birth_order_cat)) %>%
+  select(-birth_order_cat)
+
+# Combine all subgroups into one table
+
+mort_combined <- bind_rows(
+  mort_overall,
+  mort_gender,
+  mort_residence,
+  mort_wealth,
+  mort_education,
+  mort_birthOrder) %>%
+  
+  mutate(
+    # truncate negative confidence intervals
+    rate_low = if_else(rate_low < 0, 0, rate_low),
+    rate_up = if_else(rate_upp < 0, 0, rate_upp),
+    
+    # fix decimal places
+    rate_fmt = sprintf("%.1f", rate),
+    low_fmt  = sprintf("%.1f", rate_low),
+    upp_fmt  = sprintf("%.1f", rate_upp),
+    
+    # Confiddence intervals
+    ci = paste0(low_fmt, "\u2013", upp_fmt),
+  ) %>%
+  
+  select(
+    Subgroup  = subgroup,
+    Category  = level,
+    `Mortality rate` = rate_fmt,
+    `95% CI`  = ci)
+
+# Format as flextable and export to MS Word
+
+# define table borders
+standard_border <- fp_border(color = "black", width = 0.5)
+top_border <- fp_border(color = "black", width = 1.0)
+
+mort_formatted <- mort_combined %>% flextable() %>%
+  
+  # Define column width
+  width(j = "Subgroup", width = 1.8) %>% 
+  width(j = "Category", width = 1.8) %>% 
+  width(j= "Mortality rate", width = 1.4) %>% 
+  width(j = "95% CI", width = 1.4) %>% 
+  
+  # Define header format
+  bold(part = "header") %>%
+  align(part = "header", align = "center") %>%
+  bg(part = "header", bg = "#F2F2F2") %>%  
+  
+  # Define body format
+  bold(j = "Subgroup") %>% 
+  align(j = c("Mortality rate", "95% CI"),
+        align = "center", part = "body") %>% 
+  align(j = c("Subgroup", "Category"),
+        align = "left", part = "body") %>% 
+  
+  # Merge repeated subgroup labels
+  merge_v(j = "Subgroup") %>% 
+  valign(j = "Subgroup", valign = "top") %>%
+  
+  # Borders
+  border_remove() %>% 
+  hline_top(part = "header", border = top_border) %>% 
+  hline_bottom(part = "header", border = standard_border) %>%
+  hline_bottom(part = "body", border = top_border) %>% 
+  hline(i = c(1, 3, 5, 10, 14),
+        border = standard_border,
+        part = "body") %>% 
+ 
+  # Define font format and size
+  font(fontname = "Times New Roman", part = "all") %>% 
+  fontsize(size = 11, part = "body") %>% 
+  fontsize(size = 11, part = "header") %>% 
+  
+  # Set caption
+  set_caption(
+    caption = "Table 4: Weighted child mortality rate per 1,000 live births by key subgroups") %>%
+  
+  # Set footnote
+  footnote(i = 1, j = 1,
+           part   = "header",
+           value  = as_paragraph(
+      "Weighted child mortality estimates; DHS sampling weights applied. ",
+      "95% CI = 95% confidence interval.",
+      glue("Unweighted sample size = {n_total}.")), ref_symbols = "a") %>%
+  autofit()
+
+mort_formatted
+
+# Export table to Word
+
+save_as_docx(mort_formatted,
+             path = here("result/Table4_mort_by_subgroups.docx"))
+
+
+# Child mortality rate by regions
+
+mort_region <- DHSKR_tbl %>% group_by(region) %>% 
+  summarise(
+    rate = survey_mean(child_survived == "Dead",
+                       na.rm = TRUE,
+                       vartype = "ci")*1000) %>% 
+  
+  mutate(
+    # Truncate negative lower CI at zero
+    rate_low = if_else(rate_low < 0, 0, rate_low),
+    rate_upp = if_else(rate_upp < 0, 0, rate_upp),
+    
+    # Decimal points
+    rate_fmt = sprintf("%.1f", rate),
+    low_fmt  = sprintf("%.1f", rate_low),
+    upp_fmt  = sprintf("%.1f", rate_upp),
+    
+    # Confidence intervals
+    ci = paste0(low_fmt, "\u2013", upp_fmt),
+    Region = as.character(region)
+  ) %>%
+  
+  select (
+    region,
+    `Mortality rate` = rate_fmt,
+    `95% CI` = ci)
+
+print(mort_region, n = Inf)
+
+# Format as flextable
+
+mort_region <- mort_region %>% flextable() %>%
+  
+  # Column width
+  width(j = "region", width = 2.0) %>%
+  width(j = "Mortality rate", width = 1.4) %>%
+  width(j = "95% CI", width = 1.4) %>%
+  
+  # Header formatting
+  bold(part = "header") %>%
+  align(part = "header", align = "center") %>%
+  bg(part = "header", bg = "#F2F2F2") %>%
+  
+  # Body formating
+  align(j = "region",
+        align = "left",   part = "body") %>%
+  align(j = c("Mortality rate", "95% CI"),
+        align = "center", part = "body") %>%
+  
+  # Borders
+border_remove() %>%
+  hline_top(part = "header", border = top_border) %>%
+  hline_bottom(part = "header", border = standard_border) %>%
+  hline_bottom(part = "body", border = top_border) %>%
+
+  # Font format and size
+  font(fontname = "Times New Roman", part = "all") %>%
+  fontsize(size = 11, part = "all") %>%
+  
+  # Set caption
+  set_caption(
+    caption = "Table 5: Weighted child mortality rate per 1,000 live births by region") %>%
+  
+# Set footnote
+  footnote(i = 1, j = 1,
+           part = "header",
+           value = as_paragraph(
+             "Weighted child mortality estimates; DHS sampling weights applied. ", "95% CI = 95% confidence interval; lower bounds truncated at zero where applicable. ", "Wide confidence intervals reflect small regional sample sizes. ",
+             glue("Unweighted sample size = {n_total}.")), ref_symbols = "a"
+           ) %>%
+  autofit()
+
+mort_region
+
+# Export to Word
+save_as_docx(mort_region,
+             path = here("result/Table5_mort_byRegion.docx"))
+```
+
+3.4 Bivariate analysis
+
+```{r}
+#| label: Bivariate analysis
+#| echo: false
+
+# Collapse water source to "improved" and "unimproved" to align with the DHS categorization of access to water
+
+DHSKR_data$variables <- DHSKR_data$variables %>%
+  mutate(water_access = case_when(
+    water_source %in% c( # Groups access to these water sources as "improved"
+      "Piped into dwelling",
+      "Piped to plot",
+      "Public tap",
+      "Piped to neighbor",
+      "Borehole",
+      "Protected well",
+      "Protected spring",
+      "Bottled water",
+      "Rainwater",
+      "Tanker truck",
+      "Bicycle with jerrycans",
+      "Sachet water") ~ "Improved",
+    
+    water_source %in% c( # Groups access to these water sources as "Unimproved"
+      "Unprotected well",
+      "Unprotected spring",
+      "Surface water (river, dam, lake, pond)"
+      ) ~ "Unimproved",
+    
+    is.na(water_source) ~ NA_character_, TRUE ~ NA_character_) %>%
+      factor(levels = c("Improved", "Unimproved")))
+
+# Verify the collapsed "water_access" variable
+
+table(DHSKR_data$variables$water_access, useNA = "ifany")
+# There is still one missing observation
+
+# The maternal education variable has one category with less than 5 counts. This will violate survey-adjusted chi-square test, making p_value unreliable. I 
+
+dhsKR_data %>%
+  count(meduc, child_survived) %>%
+  print(n = Inf) # Mother's with higher education lost only 3 children
+
+# So, I merged Secondary and Higher education together to avoid errors, using the code below
+
+DHSKR_data$variables <- DHSKR_data$variables %>% 
+  mutate(educ_level = case_when(
+    meduc == "No education" ~ "No education",
+    meduc == "Primary" ~ "Primary",
+    meduc %in% c("Secondary", "Higher") ~ "Secondary+",
+    TRUE ~ NA_character_) %>% 
+      factor(levels = c("No education", "Primary", "Secondary+")))
+
+# Verify educ_level variable
+table(DHSKR_data$variables$educ_level, useNA = "always")
+
+
+# Create bivariate analysis table
+
+bivariate_table <- tbl_svysummary(
+  data = DHSKR_data,
+  by = child_survived, # 0 = Dead, 1 = Alive
+  
+  include = c(
+    gender,
+    mage,
+    birth_interval,
+    total_children,
+    educ_level,
+    wl_index,
+    resid_type,
+    birth_order_cat,
+    water_access),
+  
+  type = list(
+    all_continuous() ~ "continuous",
+    all_categorical() ~ "categorical"),
+  
+  statistic = list(
+    all_continuous () ~ "{mean} ({sd})",
+    all_categorical() ~ "{n_unweighted} ({p}%)"),
+  
+  digits = list(
+    all_continuous() ~ c(1, 1),
+    all_categorical() ~ c(0, 1)),
+  
+  label = list(
+    mage ~ "Mother's age (years)",
+    educ_level ~ "Maternal level of education",
+    wl_index ~ "Household wealth index",
+    resid_type ~ "Place of residence",
+    total_children ~ "Total children ever born",
+    birth_interval ~ "Birth interval (months)",
+    gender ~ "Gender of the child",
+    birth_order_cat ~ "Birth order",
+    water_access ~ "Source of drinking water"
+  ),
+  missing = "no") %>%
+  
+  add_p(test = list(
+    all_categorical() ~ "svy.chisq.test",
+    all_continuous() ~ "svy.t.test"
+    ),
+    
+    pvalue_fun = ~ style_pvalue(.x, digits = 3)) %>% 
+  
+  add_overall() %>% 
+  bold_labels() %>% 
+  italicize_levels() %>% 
+  modify_spanning_header(c(stat_1, stat_2) ~ "**Child survival status**") %>% 
+  
+  modify_header(
+    label ~ "**Characteristics**",
+    stat_0 ~ glue("**Overall (n = {n_total})**"),
+    stat_1 ~ "**Alive (1)**",
+    stat_2 ~ "**Dead (0)**",
+    p.value ~ "**p-value**"
+  ) %>% 
+  
+  modify_caption(glue(
+    "Table 6: Child survival status"
+  )) %>%
+  
+  modify_footnote(
+    all_stat_cols() ~ "Unweighted n (weighted %); DHS sampling weights applied. Mean (SD) for continuous variables. p-values from survey-adjusted chi-square test and t-test")
+
+bivariate_table
+
+# Export to Word
+bivariate_table %>% as_flex_table() %>%
+  font(fontname = "Times New Roman", part = "all") %>% 
+  fontsize(size = 11, part = "all") %>% 
+  save_as_docx(path = here("result/Table6_bivariate_analysis.docx"))
+
+# Update DHSKR_tbl
+DHSKR_tbl <- as_survey_design(DHSKR_data)
+```
+
+3.5 Graphical analysis
+
+```{r}
+#| label: Graphical analysis
+#| echo: false
+p_load(
+  scales,
+  RColorBrewer
+  )
+
+cb_palette <- c( # generate color-blind palettes
+  "#0072B2", # blue
+  "#E69F00", # amber
+  "#009E73", # green
+  "#D55E00", # vermillion
+  "#56B4E9", # sky blue
+  "#CC79A7", # pink
+  "#F0E442", # yellow
+  "#999999"  # grey
+)
+
+# Create a theme
+
+theme_publication <- function() {
+  theme_classic(base_size = 12) +
+    theme(
+      plot.title = element_text(face = "bold",
+                                size = 13,
+                                hjust = 0),
+      plot.subtitle = element_text(size = 11,
+                                   colour = "grey40",
+                                   hjust = 0),
+      axis.title = element_text(size = 11),
+      axis.text = element_text(size = 10),
+      legend.title = element_text(size = 10,
+                                  face = "bold"),
+      legend.text = element_text(size = 10),
+      legend.position = "bottom",
+      strip.background = element_rect(fill = "grey92",
+                                  colour = NA),
+      strip.text = element_text(face = "bold",
+                                size = 10),
+      panel.grid.major.y = element_line(colour = "grey92",
+                                        linewidth = 0.4),
+      plot.caption = element_text(size = 9,
+                                  color = "grey50",
+                                  hjust = 0)
+    )
+  }
+
+# Figure 1: Child mortality by household wealth index
+
+figure_1 <- mort_wealth %>% mutate(
+  level = fct_reorder(level, rate, .desc = TRUE)) %>% 
+  ggplot(aes(x = level,
+             y = rate,
+             fill = level)) +
+  geom_col(width = 0.6,
+           colour = "white") +
+  geom_errorbar(aes(ymin = rate_low,
+                    ymax = rate_upp),
+                width = 0.2,
+                linewidth = 0.6,
+                colour = "grey30") +
+  geom_text(aes(label = sprintf("%.1f", rate)),
+            vjust = -0.8,
+            size = 3.5,
+            colour ="grey30") +
+  scale_fill_manual(values = c(
+    "Poorest" = "#08519C",
+    "Poorer" = "#3182BD",
+    "Middle" = "#6BAED6",
+    "Richer" = "#BDD7E7",
+    "Richest" = "#EFF3FF"
+  )) + 
+  labs(
+    title = "Child mortality by household wealth in Uganda",
+    subtitle = "Under 5 mortality per 1,000 live births with 95% CI",
+    x = "Household wealth status",
+    y = "Child mortality rate",
+    caption = "Uganda's 2022 DHS survey-weighted estimates.") +
+  theme_publication() +
+  theme(legend.position = "none")
+
+figure_1
+
+# Export figure to Word
+ggsave(here("result/figure1_mortality_wealth.png"),
+       figure_1,
+       dpi = 300,
+       width = 8,
+       height = 5.5,
+       bg = "white")
+
+
+# Figure 2: Child mortality rate by maternal education
+
+mort_education <- DHSKR_tbl %>% # computes mortality using collapsed maternal education variable (educ_level)
+  group_by(educ_level) %>% 
+  summarise(
+    rate = survey_mean(child_survived == "Dead",
+                       na.rm = TRUE,
+                       vartype = "ci")*1000
+  ) %>% 
+  filter(!is.na(educ_level)) %>% 
+  mutate(
+    rate_low = if_else(rate_low < 0, 0, rate_low),
+    rate = round(rate, 1),
+    rate_low = round(rate_low, 1),
+    rate_upp = round(rate_upp, 1)
+  )
+
+# Generate graph
+figure_2 <- mort_education %>%
+  ggplot(aes(x = educ_level,
+             y = rate,
+             fill = educ_level)) +
+  geom_col(width = 0.5,
+           colour = "white") +
+  geom_errorbar(aes(ymin = rate_low,
+                    ymax = rate_upp),
+                width = 0.2,
+                linewidth = 0.6,
+                colour = "grey30") +
+  geom_text(aes(label = sprintf("%.1f", rate)),
+            vjust = -0.8,
+            size = 3.5,
+            colour = "grey30") +
+  scale_fill_manual(values = c(
+    "No education" = "#D55E00",
+    "Primary" = "#E69F00",
+    "Secondary+" = "#009E73"
+  )) +
+  scale_y_continuous(
+    limits = c(0, 120),
+    expand = expansion(mult = c(0, 0.1)),
+    labels = label_comma()
+  ) +
+  labs(title = "Child mortality rate by maternal education",
+       subtitle = "Under 5 mortality per 1,000 live births in Uganda with 95% CI",
+       x = "Maternal level of education",
+       y = "Child mortality rate",
+       caption = "Uganda's 2022 DHS survey-weighted estimates.") +
+  theme_publication() +
+  theme(legend.position = "none")
+
+figure_2
+
+# Export to Word
+
+ggsave(here("result/figure2_mortality_education.png"),
+       figure_2,
+       dpi    = 300,
+       width  = 7,
+       height = 5.5,
+       bg     = "white"
+       )
+
+
+# Figure 3: Child mortality by place of residence
+
+figure_3 <- mort_residence %>% ggplot(aes(x = level,
+                                          y = rate,
+                                          fill = level)) +
+  geom_col(width  = 0.4,
+           colour = "white") +
+  geom_errorbar(aes(ymin = rate_low,
+                    ymax = rate_upp),
+                width     = 0.15,
+                linewidth = 0.6,
+                colour    = "grey30") +
+  geom_text(aes(label = sprintf("%.1f", rate)),
+            vjust  = -0.8,
+            size   = 3.5,
+            colour = "grey30") +
+  scale_fill_manual(values = c(
+    "Urban" = "#0072B2",
+    "Rural" = "#E69F00"
+  )) +
+  scale_y_continuous(
+    limits = c(0, 100),
+    expand = expansion(mult = c(0, 0.1)),
+    labels = label_comma()
+  ) +
+  labs(
+    title    = "Child mortality rate by place of residence",
+    subtitle = "Under 5 mortality per 1,000 live births in Uganda with 95% CI",
+    x = "Place of residence",
+    y = "Child mortality rate",
+    caption  = "Uganda's 2022 DHS survey-weighted estimates."
+  ) +
+  theme_publication() +
+  theme(legend.position = "none")
+
+figure_3
+
+# Export to Word
+
+ggsave(here("result/figure3_mortality_residence.png"),
+       figure_3,
+       dpi = 300,
+       width = 6,
+       height = 5.5,
+       bg  = "white")
+
+
+# Figure 4: Child mortality rate by child's birth order
+
+mort_birthOrder <- DHSKR_tbl %>% # computes mortality by birth order categories
+  group_by(birth_order_cat) %>% 
+  summarise(
+    rate = survey_mean(child_survived == "Dead",
+                       na.rm = TRUE,
+                       vartype = "ci")*1000) %>% 
+  filter(!is.na(birth_order_cat)) %>% 
+  mutate(
+    rate_low = if_else(rate_low < 0, 0, rate_low),
+    rate = round(rate, 1),
+    rate_low = round(rate_low, 1),
+    rate_upp = round(rate_upp, 1)
+  )
+
+# Generate graph
+
+figure_4 <- mort_birthOrder %>%
+  ggplot(aes(x = birth_order_cat, y = rate, group = 1)) +
+  geom_ribbon(aes(ymin = rate_low,
+                  ymax = rate_upp),
+              fill = "#0072B2",
+              alpha = 0.15) +
+  geom_line(colour = "#0072B2",
+            linewidth = 1.0) +
+  geom_point(colour = "#0072B2",
+             size = 3.5) +
+  geom_text(aes(label = sprintf("%.1f", rate)),
+            vjust = -1.0,
+            size = 3.5,
+            colour = "grey30") +
+  scale_y_continuous(
+    limits = c(0, 100),
+    expand = expansion(mult = c(0, 0.15)),
+    labels = label_comma()) +
+  labs(
+    title = "Child mortality rate by birth order",
+    subtitle = "Under 5 mortality rate per 1,000 live births in Uganda with 95% CI",
+    x = "Birth order",
+    y = "Child mortality rate",
+    caption = "Uganda's 2022 DHS survey-weighted estimates.") +
+  theme_publication()
+
+figure_4
+
+# Export to Word
+
+ggsave(here("result/figure4_mortality_birthorder.png"),
+       figure_4,
+       dpi = 300,
+       width = 7,
+       height = 5.5,
+       bg = "white")
+
+
+# Figure 5: Child mortality rate by region
+
+mort_region <- DHSKR_tbl %>% # compute mortality by each region
+  group_by(region) %>% summarise(
+    rate = survey_mean(child_survived == "Dead",
+                       na.rm = TRUE,
+                       vartype = "ci")*1000) %>% 
+  filter(!is.na(region)) %>%  mutate(
+    rate_low = if_else(rate_low < 0, 0, rate_low),
+    rate = round(rate, 1),
+    rate_low = round(rate_low, 1),
+    rate_upp = round(rate_upp, 1))
+
+# Generate graph
+
+figure_5 <- mort_region %>%
+  mutate(region = fct_reorder(region, rate, .desc = TRUE)) %>%
+  ggplot(aes(x = rate,
+             y = region,
+             fill = rate)) +
+  geom_col(width = 0.65,
+           colour = "white") +
+  geom_errorbar(aes(xmin = rate_low,
+                    xmax = rate_upp),
+                width = 0.3,
+                linewidth = 0.5,
+                colour = "grey30") +
+  geom_text(aes(label = sprintf("%.1f", rate)),
+            hjust = -0.3,
+            size = 3.2,
+            colour = "grey30") +
+  scale_fill_gradient(
+    low  = "#BDD7E7",
+    high = "#08519C",
+    name = "Mortality\nrate"
+  ) +
+  scale_x_continuous(
+    limits = c(0, 160),
+    expand = expansion(mult = c(0, 0.05)),
+    labels = label_comma()
+  ) +
+  labs(
+    title = "Child mortality rate by region",
+    subtitle = "Under 5 mortality rate per 1,000 live births in Uganda with 95% CI",
+    x = "Child mortality rate",
+    y = NULL,
+    caption = "Uganda 2022 DHS survey-weighted estimates.") +
+  theme_publication() +
+  theme(legend.position = "none")
+
+figure_5
+
+# Export to Word
+ggsave(here("result/figure5_mortality_region.png"),
+       figure_5,
+       dpi    = 300,
+       width  = 9,
+       height = 6,
+       bg     = "white")
+
+
+# Figure 6: Child mortality by sources of drinking water
+
+mort_water <- DHSKR_tbl %>% # compute mortality rates per water source
+  group_by(water_access) %>%
+  summarise(
+    rate = survey_mean(child_survived == "Dead",
+                       na.rm   = TRUE,
+                       vartype = "ci") * 1000) %>%
+  filter(!is.na(water_access)) %>%
+  mutate(
+    rate_low = if_else(rate_low < 0, 0, rate_low),
+    across(where(is.numeric), ~round(.x, 1)))
+
+# Generate graph
+
+figure_6 <- mort_water %>% ggplot(aes(x = water_access,
+                                      y = rate,
+                                      fill = water_access)) +
+  geom_col(width  = 0.4,
+           colour = "white") +
+  geom_errorbar(aes(ymin = rate_low,
+                    ymax = rate_upp),
+                width = 0.15,
+                linewidth = 0.6,
+                colour = "grey30") +
+  geom_text(aes(label = sprintf("%.1f", rate)),
+            vjust = -0.8,
+            size = 3.5,
+            colour = "grey30") +
+  scale_fill_manual(values = c(
+    "Improved" = "#009E73",
+    "Unimproved" = "#D55E00"
+  )) +
+  scale_y_continuous(
+    limits = c(0, 100),
+    expand = expansion(mult = c(0, 0.1)),
+    labels = label_comma()
+  ) +
+  labs(title = "Child mortality rate by water access",
+    subtitle = "Under 5 mortality rate per 1,000 live births in Uganda with 95% CI",
+    x = "Sources of drinking water",
+    y = "Child mortality rate",
+    caption = "Uganda 2022 DHS survey-weighted estimates.") +
+  theme_publication() +
+  theme(legend.position = "none")
+
+figure_6
+
+# Export to Word
+
+ggsave(here("result/figure6_mortality_water.png"),
+       figure_6,
+       dpi = 300,
+       width = 6,
+       height = 5.5,
+       bg = "white")
+
+
+# Figure 7: Maternal age distribution by child survival rate
+
+figure_7 <- dhsKR_data %>% 
+  filter(!is.na(mage),
+         !is.na(child_survived)) %>%
+  group_by(child_survived) %>% 
+  summarise(
+    mean_age = mean(mage),
+    se = sd(mage) / sqrt(n()),
+    lower = mean_age - 1.96*se,
+    upper = mean_age + 1.96*se) %>% 
+  ggplot(aes(x = child_survived,
+             y = mean_age, 
+             color = child_survived)) +
+  geom_point(size = 4) +
+  geom_errorbar(aes(ymin = lower, ymax = upper), 
+                width = 0.15) +
+  scale_colour_manual(
+    values = c(
+      "Alive" = "#0072B2",
+      "Dead" = "#D55E00"
+  )) +
+  labs(title = "Average maternal age by child survival status",
+    subtitle = "Points = mean; error bars = 95% CI",
+    x = NULL,
+    y = "Maternal age (years)") +
+  theme_publication() +
+  theme(legend.position = "none")
+
+figure_7
+
+# Export to Word
+
+ggsave(here("result/figure7_age_mort.png"), figure_7,
+       dpi = 300,
+       width = 7,
+       height = 5.5,
+       bg = "white")
+```
