@@ -11,7 +11,7 @@
 - Data interpretation
 
 ## Repository contents:
-- `.qmd` - R quarto script for data extraction phase
-- `dofile` - Stata script for data cleaning phase
-- `logfile` - Stata data cleaning log output
-- `.qmd` - R code for descriptive data analysis
+- `data_extractionKR.qmd` - R quarto script for extracting relevant variables
+- `data_cleaning.do` -  A Stata dofile for the data cleaning phase
+- `data_cleaaning.log` - A Stata logfile for the data cleaning
+- `descriptive_analysis.qmd` - An R quarto code for descriptive data analysis
