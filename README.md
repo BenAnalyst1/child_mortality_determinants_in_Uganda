@@ -7,7 +7,7 @@
 - Cleaned dataset
 - Descriptive statistical data analysis
 
-## going task
+## Ongoing task
 - Data interpretation
 
 ## Repository contents:
