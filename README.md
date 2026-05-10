@@ -20,7 +20,9 @@ I applied the following:
 The analyses were conducted in R and Stata
 
 # 6. Key finding
-Higher fertility (total number of children ever born) among Ugandan women is associated with increased odds of under-five child mortality 
+Higher fertility (total number of children ever born) among Ugandan women is associated with increased odds of under-five child mortality
+
+Children born after longer birth intervals (24 - 47 months) exibited lower odds of under-five mortality compared to those born within a 24-month birth interval
 
 # 7. Repository contents
 - `data_extractionKR.qmd` # R data extraction script
