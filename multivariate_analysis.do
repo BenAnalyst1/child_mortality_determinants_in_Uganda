@@ -64,7 +64,7 @@ recode birth_interval ///
     (0/23 = 1 "<24 months") ///
     (24/47 = 2 "24-47 months") ///
     (48/max = 3 "48+ months"), ///
-    gen(birthint_cat)
+    generate (birthint_cat)
 	
 * recode education
 generate meduc2 = .
