@@ -1,0 +1,654 @@
+-----------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  /Users/benson/Desktop/econ_analysis/health_analysis/Stata/multivariate_analysis.lo
+> g
+  log type:  text
+ opened on:   9 May 2026, 00:02:35
+
+. 
+. * Load data
+. use "cleaned_data/dhsKR_cleaned.dta", replace
+
+. 
+. * View data
+. describe
+
+Contains data from cleaned_data/dhsKR_cleaned.dta
+ Observations:         1,434                  
+    Variables:            21                  7 May 2026 14:29
+-----------------------------------------------------------------------------------------------
+Variable      Storage   Display    Value
+    name         type    format    label      Variable label
+-----------------------------------------------------------------------------------------------
+caseid          str10   %10s                  Case Identification
+bidx            double  %9.0g                 Birth column number
+cluster_no      double  %8.0g                 Cluster number
+household_No    double  %8.0g                 Household number
+child_survived  double  %8.0g      sur_lbl    Child Survived Under 5 Mortality (1 = Alive, 0 =
+                                                Dead)
+gender          double  %8.0g      gend_lbl   Gender of the Child (1 = Male, 0 = Female)
+child_age       double  %8.0g                 Age of the Child ( In Months)
+meduc           double  %15.0g     meduc_lbl
+                                              Mother's Highest Level of Education
+wl_index        double  %10.0g     wl_ind     Household Wealth Index
+resid_type      double  %8.0g      resid_lbl
+                                              Place of Residence (1 = Urban, 2 = Rural)
+region          double  %13.0g     reg_lb     Region
+mage            double  %18.0g     v012       Age of the Mother (Years)
+total_children  double  %8.0g                 Total No. of Children Born
+water_source    double  %73.0f     wat_lbl    Source of Drinking Water
+birth_order     double  %8.0g                 Birth Order
+birth_interval  double  %9.0g                 Preceding Birth Interval(in Months)
+sample_weight   double  %9.0g                 Sample Weight
+psu_cluster     double  %9.0g                 Primary Sampling Unit - Cluster
+sample_strata   double  %30.0g     v022       Sample Strata
+age_missing     float   %9.0g                 Child Age Missing
+birth_missing   float   %9.0g                 Birth Interval Missing
+-----------------------------------------------------------------------------------------------
+Sorted by: 
+
+. codebook
+
+-----------------------------------------------------------------------------------------------
+caseid                                                                      Case Identification
+-----------------------------------------------------------------------------------------------
+
+                  Type: String (str10)
+
+         Unique values: 995                       Missing "": 0/1,434
+
+              Examples: "0132002403"
+                        "0286002102"
+                        "0422000102"
+                        "0565002502"
+
+-----------------------------------------------------------------------------------------------
+bidx                                                                        Birth column number
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+
+                 Range: [1,5]                         Units: 1
+         Unique values: 5                         Missing .: 0/1,434
+
+            Tabulation: Freq.  Value
+                          946  1
+                          397  2
+                           82  3
+                            8  4
+                            1  5
+
+-----------------------------------------------------------------------------------------------
+cluster_no                                                                       Cluster number
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+
+                 Range: [1,697]                       Units: 1
+         Unique values: 585                       Missing .: 0/1,434
+
+                  Mean: 348.941
+             Std. dev.: 204.685
+
+           Percentiles:     10%       25%       50%       75%       90%
+                             57       180       346       528       632
+
+-----------------------------------------------------------------------------------------------
+household_No                                                                   Household number
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+
+                 Range: [1,30]                        Units: 1
+         Unique values: 30                        Missing .: 0/1,434
+
+                  Mean: 15.4205
+             Std. dev.: 8.81109
+
+           Percentiles:     10%       25%       50%       75%       90%
+                              3         8        16        23        28
+
+-----------------------------------------------------------------------------------------------
+child_survived                           Child Survived Under 5 Mortality (1 = Alive, 0 = Dead)
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+                 Label: sur_lbl
+
+                 Range: [0,1]                         Units: 1
+         Unique values: 2                         Missing .: 0/1,434
+
+            Tabulation: Freq.   Numeric  Label
+                           68         0  Dead
+                        1,366         1  Alive
+
+-----------------------------------------------------------------------------------------------
+gender                                               Gender of the Child (1 = Male, 0 = Female)
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+                 Label: gend_lbl
+
+                 Range: [0,1]                         Units: 1
+         Unique values: 2                         Missing .: 0/1,434
+
+            Tabulation: Freq.   Numeric  Label
+                          715         0  Female
+                          719         1  Male
+
+-----------------------------------------------------------------------------------------------
+child_age                                                         Age of the Child ( In Months)
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+
+                 Range: [0,4]                         Units: 1
+         Unique values: 5                         Missing .: 0/1,434
+
+            Tabulation: Freq.  Value
+                          352  0
+                          288  1
+                          291  2
+                          263  3
+                          240  4
+
+-----------------------------------------------------------------------------------------------
+meduc                                                       Mother's Highest Level of Education
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+                 Label: meduc_lbl
+
+                 Range: [0,3]                         Units: 1
+         Unique values: 4                         Missing .: 0/1,434
+
+            Tabulation: Freq.   Numeric  Label
+                          135         0  No education
+                          867         1  Primary
+                          374         2  Secondary
+                           58         3  Higher
+
+-----------------------------------------------------------------------------------------------
+wl_index                                                                 Household Wealth Index
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+                 Label: wl_ind
+
+                 Range: [1,5]                         Units: 1
+         Unique values: 5                         Missing .: 0/1,434
+
+            Tabulation: Freq.   Numeric  Label
+                          382         1  Poorest
+                          287         2  Poorer
+                          268         3  Middle
+                          245         4  Richer
+                          252         5  Richest
+
+-----------------------------------------------------------------------------------------------
+resid_type                                            Place of Residence (1 = Urban, 2 = Rural)
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+                 Label: resid_lbl
+
+                 Range: [0,1]                         Units: 1
+         Unique values: 2                         Missing .: 0/1,434
+
+            Tabulation: Freq.   Numeric  Label
+                        1,008         0  Rural
+                          426         1  Urban
+
+-----------------------------------------------------------------------------------------------
+region                                                                                   Region
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+                 Label: reg_lb
+
+                 Range: [2,14]                        Units: 1
+         Unique values: 13                        Missing .: 0/1,434
+
+              Examples: 3     Busoga
+                        5     Bugisu
+                        8     Lango
+                        11    Bunyoro
+
+-----------------------------------------------------------------------------------------------
+mage                                                                  Age of the Mother (Years)
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+                 Label: v012, but 34 nonmissing values are not labeled
+
+                 Range: [16,49]                       Units: 1
+         Unique values: 34                        Missing .: 0/1,434
+
+              Examples: 22    
+                        26    
+                        30    
+                        35    
+
+-----------------------------------------------------------------------------------------------
+total_children                                                       Total No. of Children Born
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+
+                 Range: [1,12]                        Units: 1
+         Unique values: 12                        Missing .: 0/1,434
+
+                  Mean: 3.90307
+             Std. dev.: 2.39788
+
+           Percentiles:     10%       25%       50%       75%       90%
+                              1         2         3         5         7
+
+-----------------------------------------------------------------------------------------------
+water_source                                                           Source of Drinking Water
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+                 Label: wat_lbl, but 12 nonmissing values are not labeled
+
+                 Range: [11,96]                       Units: 1
+         Unique values: 16                        Missing .: 0/1,434
+
+              Examples: 14    Sachet water
+                        21    
+                        21    
+                        32    
+
+-----------------------------------------------------------------------------------------------
+birth_order                                                                         Birth Order
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+
+                 Range: [1,15]                        Units: 1
+         Unique values: 14                        Missing .: 0/1,434
+
+                  Mean: 3.79149
+             Std. dev.: 2.53057
+
+           Percentiles:     10%       25%       50%       75%       90%
+                              1         2         3         5         7
+
+-----------------------------------------------------------------------------------------------
+birth_interval                                              Preceding Birth Interval(in Months)
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+
+                 Range: [0,171]                       Units: 1
+         Unique values: 114                       Missing .: 0/1,434
+
+                  Mean: 30.7287
+             Std. dev.: 26.1515
+
+           Percentiles:     10%       25%       50%       75%       90%
+                              0        13        27        43        61
+
+-----------------------------------------------------------------------------------------------
+sample_weight                                                                     Sample Weight
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+
+                 Range: [154158,4052828]              Units: 1
+         Unique values: 583                       Missing .: 0/1,434
+
+                  Mean: 1.0e+06
+             Std. dev.:  537634
+
+           Percentiles:     10%       25%       50%       75%       90%
+                         404842    653164    930076   1.3e+06   1.7e+06
+
+-----------------------------------------------------------------------------------------------
+psu_cluster                                                    Primary Sampling Unit -  Cluster
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+
+                 Range: [1,697]                       Units: 1
+         Unique values: 585                       Missing .: 0/1,434
+
+                  Mean: 348.941
+             Std. dev.: 204.685
+
+           Percentiles:     10%       25%       50%       75%       90%
+                             57       180       346       528       632
+
+-----------------------------------------------------------------------------------------------
+sample_strata                                                                     Sample Strata
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (double)
+                 Label: v022
+
+                 Range: [1,29]                        Units: 1
+         Unique values: 29                        Missing .: 0/1,434
+
+              Examples: 6     6. Busoga
+                        11    11. Bugisu
+                        17    17. Lango
+                        23    23. Bunyoro
+
+-----------------------------------------------------------------------------------------------
+age_missing                                                                   Child Age Missing
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (float)
+
+                 Range: [0,1]                         Units: 1
+         Unique values: 2                         Missing .: 0/1,434
+
+            Tabulation: Freq.  Value
+                        1,366  0
+                           68  1
+
+-----------------------------------------------------------------------------------------------
+birth_missing                                                            Birth Interval Missing
+-----------------------------------------------------------------------------------------------
+
+                  Type: Numeric (float)
+
+                 Range: [0,1]                         Units: 1
+         Unique values: 2                         Missing .: 0/1,434
+
+            Tabulation: Freq.  Value
+                        1,144  0
+                          290  1
+
+. 
+. * Recode/create variables
+. 
+. * Generate child_dead variable from survival variable
+. generate child_dead = (child_survived == 0)
+
+. label define deadlbl 0 "Alive" 1 "Dead"
+
+. label values child_dead deadlbl
+
+. tabulate child_dead, nolabel // verify recode
+
+ child_dead |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |      1,366       95.26       95.26
+          1 |         68        4.74      100.00
+------------+-----------------------------------
+      Total |      1,434      100.00
+
+. 
+. * recode source of drinking water to "Improved" and "Unimproved" categories
+. generate water_access = .
+(1,434 missing values generated)
+
+. 
+. * Improved water sources
+. replace water_access = 1 if inlist(water_source, ///
+> 11, 12, 13, 14, 21, 31, 41, 51, 61, 71, 91, 92)
+(1,212 real changes made)
+
+.  
+.  
+.  * Unimproved water sources
+.  
+. replace water_access = 0 if inlist(water_source, ///
+> 32, 42, 81, 96)
+(222 real changes made)
+
+. 
+. * labels
+. 
+. label define waterlbl 0 "Unimproved" 1 "Improved"
+
+. label values water_access waterlbl
+
+. 
+end of do-file
+
+. do "/var/folders/s5/kx7q48xj567bg3c0mvcy13300000gn/T//SD02197.000000"
+
+. generate birth_order_cat = .
+(1,434 missing values generated)
+
+. replace birth_order_cat = 1 if birth_order == 1
+(286 real changes made)
+
+. replace birth_order_cat = 2 if inlist(birth_order, 2, 3)
+(503 real changes made)
+
+. replace birth_order_cat = 3 if birth_order >= 4
+(645 real changes made)
+
+. 
+. label define birth_lbl ///
+> 1 "1st" ///
+> 2 "2nd - 3rd" ///
+> 3 "4th+"
+
+. 
+. label values birth_order_cat birth_lbl
+
+. 
+. * recode birth interval
+. 
+. recode birth_interval ///
+>     (0/23 = 1 "<24 months") ///
+>     (24/47 = 2 "24-47 months") ///
+>     (48/max = 3 "48+ months"), ///
+>     gen(birthint_cat)
+(1,434 differences between birth_interval and birthint_cat)
+
+.         
+. * recode education
+. generate meduc2 = .
+(1,434 missing values generated)
+
+. 
+. replace meduc2 = 0 if meduc == 0
+(135 real changes made)
+
+. replace meduc2 = 1 if meduc == 1
+(867 real changes made)
+
+. replace meduc2 = 2 if inlist(meduc, 2,3)
+(432 real changes made)
+
+. 
+. label define meduc2_lbl ///
+> 0 "No education" ///
+> 1 "Primary" ///
+> 2 "Secondary+"
+
+. label values meduc2 meduc2_lbl
+
+. 
+end of do-file
+
+. do "/var/folders/s5/kx7q48xj567bg3c0mvcy13300000gn/T//SD02197.000000"
+
+. generate weight = sample_weight/1000000
+
+. rename psu_cluster cluster
+
+. rename sample_strata strata
+
+. 
+. svyset cluster [pw = weight], strata(strata) singleunit(centered)
+
+Sampling weights: weight
+             VCE: linearized
+     Single unit: centered
+        Strata 1: strata
+ Sampling unit 1: cluster
+           FPC 1: <zero>
+
+. 
+end of do-file
+
+. do "/var/folders/s5/kx7q48xj567bg3c0mvcy13300000gn/T//SD02197.000000"
+
+. eststo clear
+
+. 
+. * socioeconomic
+. eststo mod1: svy: logistic child_dead ///
+> i.meduc2 ///
+> i.wl_index ///
+> i.resid_type, or
+(running logistic on estimation sample)
+
+Survey: Logistic regression
+
+Number of strata =  29                            Number of obs   =      1,434
+Number of PSUs   = 585                            Population size = 1,464.0809
+                                                  Design df       =        556
+                                                  F(7, 550)       =       0.47
+                                                  Prob > F        =     0.8556
+
+------------------------------------------------------------------------------
+             |             Linearized
+  child_dead | Odds ratio   std. err.      t    P>|t|     [95% conf. interval]
+-------------+----------------------------------------------------------------
+      meduc2 |
+    Primary  |   .9452416   .4482111    -0.12   0.906     .3724284     2.39907
+ Secondary+  |   .7166231   .4181381    -0.57   0.568     .2277953     2.25443
+             |
+    wl_index |
+     Poorer  |   .7257763   .3312568    -0.70   0.483     .2961094    1.778908
+     Middle  |   1.009025   .4061464     0.02   0.982     .4576508    2.224691
+     Richer  |   1.281699   .5001145     0.64   0.525     .5955601    2.758332
+    Richest  |    .669449   .3533466    -0.76   0.447      .237388    1.887888
+             |
+  resid_type |
+      Urban  |   1.033759   .3687951     0.09   0.926      .512967    2.083288
+       _cons |   .0615824   .0293837    -5.84   0.000     .0241226    .1572132
+------------------------------------------------------------------------------
+Note: _cons estimates baseline odds.
+
+. 
+. * deemographic vars
+. eststo mod2: svy: logistic child_dead ///
+> i.meduc2 ///
+> i.wl_index ///
+> i.resid_type ///
+> i.birthint_cat ///
+> c.total_children ///
+> c.mage, or
+(running logistic on estimation sample)
+
+Survey: Logistic regression
+
+Number of strata =  29                            Number of obs   =      1,434
+Number of PSUs   = 585                            Population size = 1,464.0809
+                                                  Design df       =        556
+                                                  F(11, 546)      =       1.87
+                                                  Prob > F        =     0.0404
+
+--------------------------------------------------------------------------------
+               |             Linearized
+    child_dead | Odds ratio   std. err.      t    P>|t|     [95% conf. interval]
+---------------+----------------------------------------------------------------
+        meduc2 |
+      Primary  |   .9492791   .4475234    -0.11   0.912     .3760385    2.396379
+   Secondary+  |   .8564862   .5285151    -0.25   0.802      .254871    2.878196
+               |
+      wl_index |
+       Poorer  |   .7397798   .3319559    -0.67   0.502     .3064191    1.786032
+       Middle  |   .9729821    .397168    -0.07   0.947     .4364045    2.169304
+       Richer  |   1.299913   .5277302     0.65   0.518     .5855923    2.885582
+      Richest  |   .7168758    .382457    -0.62   0.533     .2513811    2.044349
+               |
+    resid_type |
+        Urban  |   1.090969   .4046504     0.23   0.814      .526508    2.260579
+               |
+  birthint_cat |
+ 24-47 months  |   .5411466   .1839915    -1.81   0.071      .277506    1.055255
+   48+ months  |   .7713491   .2906608    -0.69   0.491     .3679597    1.616969
+               |
+total_children |   1.223147   .1047249     2.35   0.019      1.03381    1.447161
+          mage |   .9703015   .0364095    -0.80   0.422     .9013565     1.04452
+         _cons |   .0759406    .072653    -2.69   0.007      .011597    .4972811
+--------------------------------------------------------------------------------
+Note: _cons estimates baseline odds.
+
+. 
+. * add environmental factors
+. eststo mod3: svy: logistic child_dead ///
+> i.meduc2 ///
+> i.wl_index ///
+> i.resid_type ///
+> i.birthint_cat ///
+> c.mage ///
+> c.total_children ///
+> i.water_access, or
+(running logistic on estimation sample)
+
+Survey: Logistic regression
+
+Number of strata =  29                            Number of obs   =      1,434
+Number of PSUs   = 585                            Population size = 1,464.0809
+                                                  Design df       =        556
+                                                  F(12, 545)      =       1.78
+                                                  Prob > F        =     0.0477
+
+--------------------------------------------------------------------------------
+               |             Linearized
+    child_dead | Odds ratio   std. err.      t    P>|t|     [95% conf. interval]
+---------------+----------------------------------------------------------------
+        meduc2 |
+      Primary  |   .9371316   .4370718    -0.14   0.889     .3749211    2.342401
+   Secondary+  |   .8121562   .4968828    -0.34   0.734     .2441926    2.701138
+               |
+      wl_index |
+       Poorer  |   .7511278   .3351673    -0.64   0.522     .3126534    1.804532
+       Middle  |   1.014118    .418169     0.03   0.973     .4511617    2.279528
+       Richer  |    1.32032   .5425351     0.68   0.499     .5890432     2.95945
+      Richest  |    .696322   .3769726    -0.67   0.504     .2404274    2.016676
+               |
+    resid_type |
+        Urban  |   1.075658   .4045181     0.19   0.846     .5138873    2.251543
+               |
+  birthint_cat |
+ 24-47 months  |   .5526865   .1880287    -1.74   0.082     .2833094    1.078193
+   48+ months  |   .8031942   .3036637    -0.58   0.562     .3822123     1.68786
+               |
+          mage |   .9639896   .0373089    -0.95   0.344     .8934223    1.040131
+total_children |   1.240912   .1098313     2.44   0.015     1.042889    1.476536
+               |
+  water_access |
+     Improved  |   1.748625    .795337     1.23   0.220     .7156413    4.272658
+         _cons |   .0537084   .0514166    -3.05   0.002     .0081919    .3521276
+--------------------------------------------------------------------------------
+Note: _cons estimates baseline odds.
+
+. 
+. * Export to word
+. esttab mod1 mod2 mod3 using "result/Table7_multivariate_table.rtf", ///
+> replace ///
+> eform ///
+> b(2) ///
+> ci(2) ///
+> label ///
+> title("Table 7: Survey-weighted logistic regression of child mortality determinants") ///
+> mtitles("Model 1" "Model 2" "Model 3") ///
+> star(* 0.10 ** 0.05 *** 0.01) ///
+> stats(N, fmt(0) labels("Observations")) ///
+> compress ///
+> nonotes
+(output written to result/Table7_multivariate_table.rtf)
+
+. 
+end of do-file
+
+. do "/var/folders/s5/kx7q48xj567bg3c0mvcy13300000gn/T//SD02197.000000"
+
+. log close
+      name:  <unnamed>
+       log:  /Users/benson/Desktop/econ_analysis/health_analysis/Stata/multivariate_analysis.lo
+> g
+  log type:  text
+ closed on:   9 May 2026, 00:05:10
+-----------------------------------------------------------------------------------------------
