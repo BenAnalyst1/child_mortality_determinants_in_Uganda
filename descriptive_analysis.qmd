@@ -554,33 +554,35 @@ save_as_docx(mort_region,
 
 DHSKR_data$variables <- DHSKR_data$variables %>%
   mutate(water_access = case_when(
-    water_source %in% c( # Groups access to these water sources as "improved"
-      "Piped into dwelling",
-      "Piped to plot",
-      "Public tap",
-      "Piped to neighbor",
-      "Borehole",
-      "Protected well",
-      "Protected spring",
-      "Bottled water",
-      "Rainwater",
-      "Tanker truck",
-      "Bicycle with jerrycans",
-      "Sachet water") ~ "Improved",
+    water_source %in% c( 
+# Improved sources
+"Piped into dwelling", "Piped to plot", "Piped to neighbor", "Public tap", "Borehole", "Protected well", "Protected spring", "Rainwater", "Tanker truck", "icycle with jerrycans", "Bottled water", "Sachet water",
+"21", # Borehole
+"31", # Protected well
+"41", # Protected spring
+"51", # Rainwater
+"61", # Tanker truck
+"71", # Bicycle with jerrycans
+"91", # Bottled water
+"92" # Sachet water
+) ~ "Improved",
     
-    water_source %in% c( # Groups access to these water sources as "Unimproved"
-      "Unprotected well",
-      "Unprotected spring",
-      "Surface water (river, dam, lake, pond)"
-      ) ~ "Unimproved",
-    
+water_source %in% c( 
+# Unimproved sources
+"Unprotected well", "Unprotected spring", "Surface water (river, dam, lake, pond)",
+"32", # Unprotected well
+"42", # Unprotected spring
+"81", # Surface water (river, dam, lake, pond)
+"96" # Don't know
+) ~ "Unimproved",
+
     is.na(water_source) ~ NA_character_, TRUE ~ NA_character_) %>%
       factor(levels = c("Improved", "Unimproved")))
 
 # Verify the collapsed "water_access" variable
 
 table(DHSKR_data$variables$water_access, useNA = "ifany")
-# There is still one missing observation
+# No missing observation
 
 # The maternal education variable has one category with less than 5 counts. This will violate survey-adjusted chi-square test, making p_value unreliable. I 
 
