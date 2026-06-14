@@ -38,7 +38,7 @@ The analysis was done using R and Stata. R was particularly used for data extrac
 - `data_cleaning.log` # Stata data cleaning logfile
 - `descriptive_analysis.qmd` - R descriptive data analysis script
 - `multivariate_analysis.do` - Stata multivariate logistic regression script
-- `Report_data_analysis_and_interpretation.pdf
+- `Report_data_analysis_and_interpretation.pdf`
 
 # 8. Data availability
 For access to the cleaned data, write to me via the email adress, bensonbinya@gmail.com
